@@ -6,8 +6,13 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// Same-origin proxy so the PWA (and its session cookie) talks to the Python engine through one URL/tunnel.
+const proxy = { "/api": { target: process.env.API_TARGET || "http://127.0.0.1:8000", changeOrigin: true } };
+
 export default defineConfig({
   vite: {
+    server: { proxy, host: true, allowedHosts: true },
+    preview: { proxy, host: true, allowedHosts: true },
     optimizeDeps: {
       // Prebundle shared UI dependencies together with React before routes load.
       // Late optimization can otherwise mix stale React URLs in an open preview.
