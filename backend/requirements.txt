@@ -1,0 +1,8 @@
+# Core engine + server + dashboard need ONLY the Python 3.11+ standard library.
+# Optional (spec stack, not required to run):
+networkx>=3.0      # reroute/graph.py
+pytest>=8.0        # optional: `pytest tests` (run_tests.py works without it)
+pydantic>=2
+pandas>=2          # reroute/export.py
+openpyxl>=3.1.0    # Excel export
+
