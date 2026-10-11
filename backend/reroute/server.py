@@ -69,6 +69,13 @@ def get_session(handler: BaseHTTPRequestHandler) -> tuple[str, Session]:
         return session_id, SESSIONS[session_id]
 
 
+def _field(model, body: dict, key: str, default=None):
+    """Read a validated field; works with a pydantic model or the raw dict used when pydantic is absent."""
+    if model is not None and not isinstance(model, dict):
+        return getattr(model, key, default)
+    return body.get(key, default)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -79,6 +86,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        origin = self.headers.get("Origin")
+        if origin:                                   # allow the PWA/frontend on another origin (cookies included)
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Credentials", "true")
+            self.send_header("Vary", "Origin")
         if set_cookie and session_id:
             self.send_header("Set-Cookie", f"reroute_session={session_id}; HttpOnly; SameSite=Lax; Path=/")
         if headers:
@@ -86,6 +98,16 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        origin = self.headers.get("Origin") or "*"
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Access-Control-Allow-Credentials", "true")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -198,7 +220,7 @@ class Handler(BaseHTTPRequestHandler):
                 if errs:
                     return self._send(400, {"errors": errs}, session_id=session_id, set_cookie=is_new_session)
                 os.makedirs(SCEN_DIR, exist_ok=True)
-                raw_name = model.name if model else body.get("name", "scenario")
+                raw_name = _field(model, body, "name", "scenario")
                 name = "".join(c for c in raw_name if c.isalnum() or c in "-_") or "scenario"
                 json.dump(session.scenario.to_dict(), open(os.path.join(SCEN_DIR, name + ".json"), "w"), indent=1)
                 return self._send(200, {"saved": name}, session_id=session_id, set_cookie=is_new_session)
@@ -206,7 +228,7 @@ class Handler(BaseHTTPRequestHandler):
                 model, errs = validate_api_input(LoadInput, body)
                 if errs:
                     return self._send(400, {"errors": errs}, session_id=session_id, set_cookie=is_new_session)
-                raw_name = model.name if model else body.get("name", "")
+                raw_name = _field(model, body, "name", "")
                 name = "".join(c for c in raw_name if c.isalnum() or c in "-_")
                 with SESSIONS_LOCK:
                     SESSIONS[session_id] = load_scenario(json.load(open(os.path.join(SCEN_DIR, name + ".json"))))
@@ -221,14 +243,14 @@ class Handler(BaseHTTPRequestHandler):
                 model, errs = validate_api_input(TextIncidentInput, body)
                 if errs:
                     return self._send(400, {"errors": errs}, session_id=session_id, set_cookie=is_new_session)
-                text_val = model.text if model else body.get("text", "")
+                text_val = _field(model, body, "text", "")
                 return self._send(200, session.preview(text=text_val), session_id=session_id, set_cookie=is_new_session)
             if path == "/api/incident/apply":
                 model, errs = validate_api_input(ApplyInput, body)
                 if errs:
                     return self._send(400, {"errors": errs}, session_id=session_id, set_cookie=is_new_session)
-                apply_id = model.id if model else body["id"]
-                confirm_val = model.confirm if model else bool(body.get("confirm"))
+                apply_id = _field(model, body, "id")
+                confirm_val = _field(model, body, "confirm", False)
                 session.apply(apply_id, bool(confirm_val))
                 return self._send(200, session.state(), session_id=session_id, set_cookie=is_new_session)
             if path == "/api/incident/cancel":
@@ -278,15 +300,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send(500, {"error": f"Internal error: {e}"}, session_id=session_id, set_cookie=is_new_session)
 
 
-def main(port: int = 8000):
+def main(port: int = 8000, host: str = "127.0.0.1"):
     global SESSION
     # Initialize a default session for backward compatibility
     SESSION = load_scenario(json.load(open(DEMO)))
     # Also add it to SESSIONS with a default ID
     with SESSIONS_LOCK:
         SESSIONS["default"] = SESSION
-    srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    print(f"ReRoute dashboard: http://127.0.0.1:{port}")
+    srv = ThreadingHTTPServer((host, port), Handler)
+    print(f"ReRoute dashboard: http://{host}:{port}")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
@@ -294,4 +316,4 @@ def main(port: int = 8000):
 
 
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else 8000)
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8000)), os.environ.get("REROUTE_HOST", "127.0.0.1"))
