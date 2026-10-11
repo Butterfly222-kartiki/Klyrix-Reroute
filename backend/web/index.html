@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReRoute · Dispatcher</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" onerror="window.PlotlyFailed=true"></script>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="mark">◈</span> ReRoute <small>dynamic fleet replanning · S-01</small></div>
+  <div id="scn" class="scn"></div>
+  <div class="hbtns">
+    <button id="btnReset" class="ghost">Reset demo</button>
+    <button id="btnSave" class="ghost">Save scenario</button>
+    <label class="ghost btn">Upload JSON<input id="file" type="file" accept=".json" hidden></label>
+  </div>
+</header>
+<main>
+  <section id="console" class="panel">
+    <h2>Incident console <span id="clock" class="clock"></span></h2>
+    <div class="row2" style="margin-bottom:10px">
+      <div><label class="f">Simulation time</label><input type="range" id="timeSlider" min="0" max="1440" step="30" value="480"></div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <button id="btnAdvance" class="ghost">Advance to time</button>
+        <button id="btnUndo" class="ghost">Undo last</button>
+        <button id="btnReport" class="ghost">Download report</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <button data-t="road_closure" class="on">Road closure</button>
+      <button data-t="vehicle_breakdown">Breakdown</button>
+      <button data-t="urgent_order">Urgent order</button>
+      <button data-t="text">Text report</button>
+    </div>
+    <div id="forms"></div>
+    <div id="msg" class="msg"></div>
+    <div id="previewBox"></div>
+    <h3>Event log</h3>
+    <div id="events" class="events"></div>
+  </section>
+  <section id="center">
+    <div class="panel"><h2>Network <span class="legend" id="legend"></span></h2><div id="map"></div></div>
+    <div class="panel"><h2>Timeline</h2><div id="timeline"></div></div>
+    <div class="panel"><h2 id="cmpTitle">Plan comparison</h2>
+      <div class="seg"><button id="segLast" class="on">Last change</button><button id="segOrig">vs. morning plan</button></div>
+      <div id="chips"></div><div class="scroll"><table id="cmp"></table></div></div>
+  </section>
+  <section id="side">
+    <div class="panel"><h2>AI Assistant</h2>
+      <div style="margin-bottom:10px">
+        <input type="text" id="whyQuestion" placeholder="Ask why... (e.g., why was D5 moved?)" style="width:100%;padding:6px">
+        <button id="btnAskWhy" class="ghost" style="margin-top:4px;width:100%">Ask AI</button>
+        <div id="aiAnswer" class="small" style="margin-top:8px;padding:8px;background:var(--p);border-radius:4px;display:none"></div>
+      </div>
+      <div>
+        <button id="btnGenMessages" class="ghost" style="width:100%">Generate customer messages</button>
+        <button id="btnShowAlerts" class="ghost" style="width:100%;margin-top:4px">Show predictive alerts</button>
+      </div>
+      <div id="aiMessages" style="margin-top:10px"></div>
+      <div id="aiAlerts" style="margin-top:10px"></div>
+    </div>
+    <div class="panel"><h2>Validation</h2><div id="valid"></div></div>
+    <div class="panel"><h2>Metrics</h2><div id="metrics"></div></div>
+    <div class="panel"><h2>Fleet</h2><div id="fleet"></div></div>
+  </section>
+</main>
+<h2 style="margin:20px;text-align:center">Plotly Charts</h2>
+<div style="padding:0 20px 20px">
+  <div id="chartMap" style="width:100%;height:400px"></div>
+  <div id="chartGantt" style="width:100%;height:300px"></div>
+  <div id="chartUtil" style="width:100%;height:300px"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
