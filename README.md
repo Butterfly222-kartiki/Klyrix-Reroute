@@ -76,9 +76,28 @@ bun run dev
 
 Without a Groq key everything still works using the deterministic parser.
 
+## Mobile demo (PWA)
+
+The React app is an installable PWA (manifest, service worker, icons, offline fallback to the last saved plan). Phones only allow install/service workers over **HTTPS**, so tunnel the dev server:
+
+```bash
+# terminal 1 - engine
+cd backend && python -m reroute.server            # :8000
+# terminal 2 - app (proxies /api to the engine, so one URL is enough)
+cd frontend && bun run dev:mobile                 # note the port Vite prints
+# terminal 3 - public HTTPS URL for the phone
+npx cloudflared tunnel --url http://localhost:<port>    # or: ngrok http <port>
+```
+
+Open the HTTPS URL on the phone, then **Install app** (Android/Chrome) or **Share -> Add to Home Screen** (iOS/Safari). On the same Wi-Fi without a tunnel the app still works in the browser at `http://<laptop-ip>:<port>`, just not installable.
+
+Fallback: the built-in dashboard is also a PWA. `REROUTE_HOST=0.0.0.0 python -m reroute.server`, tunnel port 8000, same install steps.
+
+Demo script: Overview -> Disruptions -> type `V2 broke down at 10:30` -> Preview impact -> Approve & apply -> Compare Plans (kept / moved / broken) -> Overview -> Undo.
+
 ## Status
 
-Backend engine, validator, comparison, incidents and the built-in dashboard are working and tested. The React frontend is a UI shell and is not yet connected to the backend API. Cascade-chain visualization, multi-plan counterfactual comparison and resilience scoring are the next milestones.
+Backend engine, validator, comparison, incidents and the built-in dashboard are working and tested. The React frontend is now connected to the API: Overview, Live Fleet Map (routes drawn per vehicle), Deliveries, Vehicles, Locations, Disruptions (text incident -> preview -> approve), Compare Plans (kept/moved/broken, CSV/Excel export) and Reports read live engine data. Delivery Planning and Settings are still static shells. Cascade-chain visualization, multi-plan counterfactual comparison and resilience scoring are the next milestones.
 
 ## Assumptions
 
